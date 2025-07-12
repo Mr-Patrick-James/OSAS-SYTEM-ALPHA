@@ -1,6 +1,6 @@
 <script setup>
 import logo from '@/assets/images/logo.png'
-import '@/assets/styles/login.css'
+import '@/assets/styles/login.scss'
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { library } from '@fortawesome/fontawesome-svg-core'
