@@ -1,1454 +1,1321 @@
-<script>
-import { ref, computed, onMounted, watch } from 'vue';
-import Chart from 'chart.js/auto';
-import AddDepartmentModal from './modals/AddDepartmentModal.vue';
-import AddViolationModal from './modals/AddViolationModal.vue';
-import ViolationDetailsModal from './modals/ViolationDetailsModal.vue';
-
-export default {
-  name: 'Dashboard',
-  components: {
-    AddDepartmentModal,
-    AddViolationModal,
-    ViolationDetailsModal
-  },
-  setup() {
-    // State management
-    const activeTab = ref('dashboard');
-    const sidebarHidden = ref(false);
-    const darkMode = ref(false);
-    const searchQuery = ref('');
-    const notificationsCount = ref(8);
-    const userProfileImage = ref('img/people.png');
-    
-    // Dashboard data
-    const dashboardStats = ref({
-      totalStudents: 1250,
-      totalViolations: 34,
-      totalDepartments: 8
-    });
-    
-    const recentViolations = ref([
-      { id: 1, studentName: 'John Doe', studentImage: 'img/people.png', date: new Date(), type: 'Tardiness', status: 'pending' },
-      { id: 2, studentName: 'Jane Smith', studentImage: 'img/people.png', date: new Date(Date.now() - 86400000), type: 'Uniform', status: 'resolved' },
-      { id: 3, studentName: 'Mike Johnson', studentImage: 'img/people.png', date: new Date(Date.now() - 172800000), type: 'Disrespect', status: 'pending' },
-      { id: 4, studentName: 'Sarah Williams', studentImage: 'img/people.png', date: new Date(Date.now() - 259200000), type: 'Cheating', status: 'resolved' }
-    ]);
-    
-    const todos = ref([
-      { text: 'Review pending violations', completed: false },
-      { text: 'Update department records', completed: true },
-      { text: 'Generate monthly report', completed: false },
-      { text: 'Meet with department heads', completed: true },
-      { text: 'Update student records', completed: false }
-    ]);
-    
-    // Department data
-    const departments = ref([
-      { id: 1, name: 'Computer Science', head: 'Dr. Smith', studentCount: 320 },
-      { id: 2, name: 'Engineering', head: 'Dr. Johnson', studentCount: 280 },
-      { id: 3, name: 'Business', head: 'Dr. Williams', studentCount: 250 },
-      { id: 4, name: 'Arts', head: 'Dr. Brown', studentCount: 180 }
-    ]);
-    
-    // Violation data
-    const violations = ref([
-      { id: 1, studentId: '2021-001', studentName: 'John Doe', type: 'Tardiness', date: new Date(), status: 'pending' },
-      { id: 2, studentId: '2021-002', studentName: 'Jane Smith', type: 'Uniform', date: new Date(Date.now() - 86400000), status: 'resolved' },
-      { id: 3, studentId: '2021-003', studentName: 'Mike Johnson', type: 'Disrespect', date: new Date(Date.now() - 172800000), status: 'pending' },
-      { id: 4, studentId: '2021-004', studentName: 'Sarah Williams', type: 'Cheating', date: new Date(Date.now() - 259200000), status: 'resolved' }
-    ]);
-    
-    const violationFilter = ref('all');
-    const filteredViolations = computed(() => {
-      if (violationFilter.value === 'all') return violations.value;
-      return violations.value.filter(v => v.status === violationFilter.value || v.type === violationFilter.value);
-    });
-    
-    // Reports data
-    const reportType = ref('violations');
-    const reportPeriod = ref('monthly');
-    const reportStats = ref([
-      { label: 'Total Violations', value: 34 },
-      { label: 'Pending Cases', value: 12 },
-      { label: 'Resolved Cases', value: 22 },
-      { label: 'Repeat Offenders', value: 5 }
-    ]);
-    
-    // Modal controls
-    const showAddDepartmentModal = ref(false);
-    const showAddViolationModal = ref(false);
-    const selectedViolation = ref(null);
-    
-    // Chart reference
-    const reportChart = ref(null);
-    let chartInstance = null;
-    
-    // Methods
-    const setActiveTab = (tab) => {
-      activeTab.value = tab;
-    };
-    
-    const toggleSidebar = () => {
-      sidebarHidden.value = !sidebarHidden.value;
-    };
-    
-    const search = () => {
-      // Implement search functionality
-      console.log('Searching for:', searchQuery.value);
-    };
-    
-    const logout = () => {
-      // Implement logout functionality
-      console.log('Logging out...');
-    };
-    
-    const downloadReport = () => {
-      // Implement download functionality
-      console.log('Downloading report...');
-    };
-    
-    const formatDate = (date) => {
-      return new Date(date).toLocaleDateString();
-    };
-    
-    const addNewTodo = () => {
-      const newTodo = prompt('Enter new todo:');
-      if (newTodo) {
-        todos.value.push({ text: newTodo, completed: false });
-      }
-    };
-    
-    const showTodoOptions = (index) => {
-      // Implement todo options
-      console.log('Showing options for todo at index:', index);
-    };
-    
-    const saveDepartment = (newDept) => {
-      departments.value.push({
-        id: departments.value.length + 1,
-        ...newDept,
-        studentCount: 0
-      });
-      showAddDepartmentModal.value = false;
-    };
-    
-    const editDepartment = (dept) => {
-      // Implement edit functionality
-      console.log('Editing department:', dept);
-    };
-    
-    const confirmDeleteDepartment = (id) => {
-      if (confirm('Are you sure you want to delete this department?')) {
-        departments.value = departments.value.filter(d => d.id !== id);
-      }
-    };
-    
-    const filterViolations = () => {
-      // Filtering is handled by computed property
-    };
-    
-    const saveViolation = (newViolation) => {
-      violations.value.push({
-        id: violations.value.length + 1,
-        ...newViolation,
-        date: new Date(),
-        status: 'pending'
-      });
-      showAddViolationModal.value = false;
-    };
-    
-    const viewViolationDetails = (id) => {
-      selectedViolation.value = violations.value.find(v => v.id === id);
-    };
-    
-    const editViolation = (violation) => {
-      // Implement edit functionality
-      console.log('Editing violation:', violation);
-    };
-    
-    const updateViolationStatus = (updatedViolation) => {
-      const index = violations.value.findIndex(v => v.id === updatedViolation.id);
-      if (index !== -1) {
-        violations.value[index] = updatedViolation;
-      }
-      selectedViolation.value = null;
-    };
-    
-    const generateReport = () => {
-      // Implement report generation
-      console.log('Generating', reportType.value, 'report for', reportPeriod.value);
-      
-      // Update chart
-      if (chartInstance) {
-        chartInstance.destroy();
-      }
-      
-      const ctx = reportChart.value.getContext('2d');
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          datasets: [{
-            label: reportType.value === 'violations' ? 'Violations' : reportType.value === 'students' ? 'Students' : 'Departments',
-            data: [12, 19, 3, 5, 2, 3],
-            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          }
-        }
-      });
-    };
-    
-    const printReport = () => {
-      window.print();
-    };
-    
-    const exportReport = () => {
-      // Implement export functionality
-      console.log('Exporting report...');
-    };
-    
-    // Watch for dark mode changes
-    watch(darkMode, (newVal) => {
-      document.body.classList.toggle('dark', newVal);
-    });
-    
-    // Initialize chart on mount
-    onMounted(() => {
-      generateReport();
-    });
-    
-    // Computed properties
-    const pageTitle = computed(() => {
-      switch (activeTab.value) {
-        case 'dashboard': return 'Dashboard';
-        case 'department': return 'Department Management';
-        case 'violation': return 'Student Violation Records';
-        case 'reports': return 'System Reports';
-        default: return 'Dashboard';
-      }
-    });
-    
-    return {
-      // State
-      activeTab,
-      sidebarHidden,
-      darkMode,
-      searchQuery,
-      notificationsCount,
-      userProfileImage,
-      
-      // Data
-      dashboardStats,
-      recentViolations,
-      todos,
-      departments,
-      violations,
-      violationFilter,
-      filteredViolations,
-      reportType,
-      reportPeriod,
-      reportStats,
-      
-      // Refs
-      reportChart,
-      
-      // Modals
-      showAddDepartmentModal,
-      showAddViolationModal,
-      selectedViolation,
-      
-      // Methods
-      setActiveTab,
-      toggleSidebar,
-      search,
-      logout,
-      downloadReport,
-      formatDate,
-      addNewTodo,
-      showTodoOptions,
-      saveDepartment,
-      editDepartment,
-      confirmDeleteDepartment,
-      filterViolations,
-      saveViolation,
-      viewViolationDetails,
-      editViolation,
-      updateViolationStatus,
-      generateReport,
-      printReport,
-      exportReport,
-      
-      // Computed
-      pageTitle
-    };
-  }
-};
-</script>
-
-
 <template>
-  <div class="dashboard-container">
-    <!-- SIDEBAR -->
-    <section id="sidebar" :class="{ hide: sidebarHidden }">
-      <a href="#" class="brand">
-        <i class='bx bxs-smile'></i>
-        <span class="text">AdminHub</span>
-      </a>
-      <ul class="side-menu top">
-        <li :class="{ active: activeTab === 'dashboard' }">
-          <a href="#" @click.prevent="setActiveTab('dashboard')">
-            <i class='bx bxs-dashboard'></i>
-            <span class="text">Dashboard</span>
-          </a>
-        </li>
-        <li :class="{ active: activeTab === 'department' }">
-          <a href="#" @click.prevent="setActiveTab('department')">
-            <i class='bx bxs-group'></i>
-            <span class="text">Department</span>
-          </a>
-        </li>
-        <li :class="{ active: activeTab === 'violation' }">
-          <a href="#" @click.prevent="setActiveTab('violation')">
-            <i class='bx bxs-report'></i>
-            <span class="text">Student Violation</span>
-          </a>
-        </li>
-        <li :class="{ active: activeTab === 'reports' }">
-          <a href="#" @click.prevent="setActiveTab('reports')">
-            <i class='bx bxs-doughnut-chart'></i>
-            <span class="text">Reports</span>
-          </a>
-        </li>
-      </ul>
-      <ul class="side-menu">
-        <li>
-          <a href="#">
-            <i class='bx bxs-cog'></i>
-            <span class="text">Settings</span>
-          </a>
-        </li>
-        <li>
-          <a href="#" class="logout" @click.prevent="logout">
-            <i class='bx bxs-log-out-circle'></i>
-            <span class="text">Logout</span>
-          </a>
-        </li>
-      </ul>
-    </section>
-    <!-- SIDEBAR -->
+  <div class="dashboard" :class="{'dark': darkMode, 'mobile-nav-open': mobileNavOpen}">
+    <!-- Gold Particle Background -->
+    <div class="gold-particles">
+      <div v-for="i in 15" :key="i" class="particle" :style="particleStyle(i)"></div>
+    </div>
 
-    <!-- CONTENT -->
-    <section id="content" :style="{ width: sidebarHidden ? 'calc(100% - 60px)' : 'calc(100% - 280px)', left: sidebarHidden ? '60px' : '280px' }">
-      <!-- NAVBAR -->
-      <nav>
-        <i class='bx bx-menu' @click="toggleSidebar"></i>
-        <a href="#" class="nav-link">Categories</a>
-        <form action="#">
-          <div class="form-input">
-            <input type="search" placeholder="Search..." v-model="searchQuery">
-            <button type="submit" class="search-btn" @click.prevent="search"><i class='bx bx-search'></i></button>
-          </div>
-        </form>
-        <input type="checkbox" id="switch-mode" v-model="darkMode" hidden>
-        <label for="switch-mode" class="switch-mode"></label>
-        <a href="#" class="notification">
-          <i class='bx bxs-bell'></i>
-          <span class="num">{{ notificationsCount }}</span>
-        </a>
-        <a href="#" class="profile">
-          <img :src="userProfileImage">
-        </a>
+    <!-- Mobile Header -->
+    <header class="mobile-header" v-if="isMobile">
+      <button class="menu-toggle" @click="mobileNavOpen = !mobileNavOpen" aria-label="Toggle menu">
+        <span class="material-icons">menu</span>
+      </button>
+      <h1 class="mobile-logo">AUREUM</h1>
+      <button class="theme-toggle-mobile" @click="toggleTheme" aria-label="Toggle theme">
+        <span class="material-icons">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span>
+      </button>
+    </header>
+
+    <!-- Side Navigation -->
+    <aside class="sidenav" :class="{'visible': mobileNavOpen || !isMobile}">
+      <div class="nav-header">
+        <div class="logo">
+          <svg viewBox="0 0 100 100" class="logo-svg" aria-hidden="true">
+            <path d="M50 0 L100 50 L50 100 L0 50 Z" fill="none" stroke="#D4AF37" stroke-width="4"/>
+            <circle cx="50" cy="50" r="30" fill="none" stroke="#D4AF37" stroke-width="4"/>
+          </svg>
+          <span>AUREUM</span>
+        </div>
+        <button class="close-nav" @click="mobileNavOpen = false" v-if="isMobile" aria-label="Close menu">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      
+      <nav class="nav-menu" aria-label="Main navigation">
+        <button class="nav-item active" aria-current="page">
+          <span class="material-icons" aria-hidden="true">dashboard</span>
+          <span>Dashboard</span>
+          <div class="gold-bar" aria-hidden="true"></div>
+        </button>
+        <button class="nav-item">
+          <span class="material-icons" aria-hidden="true">trending_up</span>
+          <span>Analytics</span>
+        </button>
+        <button class="nav-item">
+          <span class="material-icons" aria-hidden="true">people</span>
+          <span>Clients</span>
+        </button>
+        <button class="nav-item">
+          <span class="material-icons" aria-hidden="true">payment</span>
+          <span>Transactions</span>
+        </button>
+        <button class="nav-item">
+          <span class="material-icons" aria-hidden="true">settings</span>
+          <span>Settings</span>
+        </button>
       </nav>
-      <!-- NAVBAR -->
-
-      <!-- MAIN CONTENT -->
-      <main>
-        <div class="head-title">
-          <div class="left">
-            <h1>{{ pageTitle }}</h1>
-            <ul class="breadcrumb">
-              <li>
-                <a href="#">Dashboard</a>
-              </li>
-              <li><i class='bx bx-chevron-right'></i></li>
-              <li>
-                <a class="active" href="#">{{ activeTab }}</a>
-              </li>
-            </ul>
-          </div>
-          <a href="#" class="btn-download" @click.prevent="downloadReport">
-            <i class='bx bxs-cloud-download'></i>
-            <span class="text">Download PDF</span>
-          </a>
+      
+      <div class="user-profile">
+        <div class="avatar">
+          <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User profile picture">
         </div>
-
-        <!-- Dashboard Content -->
-        <div v-if="activeTab === 'dashboard'">
-          <ul class="box-info">
-            <li>
-              <i class='bx bxs-calendar-check'></i>
-              <span class="text">
-                <h3>{{ dashboardStats.totalStudents }}</h3>
-                <p>Total Students</p>
-              </span>
-            </li>
-            <li>
-              <i class='bx bxs-group'></i>
-              <span class="text">
-                <h3>{{ dashboardStats.totalViolations }}</h3>
-                <p>Violations This Month</p>
-              </span>
-            </li>
-            <li>
-              <i class='bx bxs-school'></i>
-              <span class="text">
-                <h3>{{ dashboardStats.totalDepartments }}</h3>
-                <p>Departments</p>
-              </span>
-            </li>
-          </ul>
-
-          <div class="table-data">
-            <div class="order">
-              <div class="head">
-                <h3>Recent Violations</h3>
-                <i class='bx bx-search' @click="showViolationSearch = !showViolationSearch"></i>
-                <i class='bx bx-filter' @click="showViolationFilter = !showViolationFilter"></i>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Date</th>
-                    <th>Violation Type</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="violation in recentViolations" :key="violation.id">
-                    <td>
-                      <img :src="violation.studentImage || 'img/people.png'">
-                      <p>{{ violation.studentName }}</p>
-                    </td>
-                    <td>{{ formatDate(violation.date) }}</td>
-                    <td>{{ violation.type }}</td>
-                    <td><span class="status" :class="violation.status">{{ violation.status }}</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="todo">
-              <div class="head">
-                <h3>Pending Actions</h3>
-                <i class='bx bx-plus' @click="addNewTodo"></i>
-                <i class='bx bx-filter' @click="showTodoFilter = !showTodoFilter"></i>
-              </div>
-              <ul class="todo-list">
-                <li v-for="(todo, index) in todos" :key="index" :class="{ completed: todo.completed }">
-                  <p>{{ todo.text }}</p>
-                  <i class='bx bx-dots-vertical-rounded' @click="showTodoOptions(index)"></i>
-                </li>
-              </ul>
-            </div>
-          </div>
+        <div class="user-info">
+          <span class="name">Alexa K.</span>
+          <span class="role">Premium Member</span>
         </div>
+      </div>
+    </aside>
 
-        <!-- Department Content -->
-        <div v-if="activeTab === 'department'">
-          <div class="department-management">
-            <div class="department-header">
-              <h2>Department Management</h2>
-              <button class="btn-add" @click="showAddDepartmentModal = true">
-                <i class='bx bx-plus'></i> Add Department
-              </button>
-            </div>
-            
-            <div class="department-list">
-              <div class="department-card" v-for="dept in departments" :key="dept.id">
-                <div class="dept-info">
-                  <h3>{{ dept.name }}</h3>
-                  <p>Head: {{ dept.head }}</p>
-                  <p>Students: {{ dept.studentCount }}</p>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Desktop Top Navigation -->
+      <header class="topnav" v-if="!isMobile">
+        <h1>Executive Dashboard</h1>
+        <div class="header-actions">
+          <div class="search-bar">
+            <span class="material-icons" aria-hidden="true">search</span>
+            <input type="text" placeholder="Search..." aria-label="Search dashboard">
+          </div>
+          <button class="notification-btn" aria-label="Notifications">
+            <span class="material-icons" aria-hidden="true">notifications</span>
+            <span class="badge">3</span>
+          </button>
+          <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
+            <span class="material-icons">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Content -->
+      <div class="dashboard-content">
+        <!-- Stats Cards -->
+        <section class="stats-section" aria-labelledby="stats-heading">
+          <h2 id="stats-heading" class="visually-hidden">Key Statistics</h2>
+          <div class="stats-grid">
+            <div v-for="(stat, index) in stats" :key="index" class="stat-card" :class="stat.trendDirection">
+              <div class="card-content">
+                <div class="icon" aria-hidden="true">
+                  <span class="material-icons">{{ stat.icon }}</span>
                 </div>
-                <div class="dept-actions">
-                  <button class="btn-edit" @click="editDepartment(dept)">
-                    <i class='bx bx-edit'></i>
-                  </button>
-                  <button class="btn-delete" @click="confirmDeleteDepartment(dept.id)">
-                    <i class='bx bx-trash'></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Student Violation Content -->
-        <div v-if="activeTab === 'violation'">
-          <div class="violation-management">
-            <div class="violation-header">
-              <h2>Student Violation Records</h2>
-              <div class="violation-controls">
-                <button class="btn-add" @click="showAddViolationModal = true">
-                  <i class='bx bx-plus'></i> Add Violation
-                </button>
-                <select v-model="violationFilter" @change="filterViolations">
-                  <option value="all">All Violations</option>
-                  <option value="minor">Minor</option>
-                  <option value="major">Major</option>
-                  <option value="pending">Pending</option>
-                  <option value="resolved">Resolved</option>
-                </select>
-              </div>
-            </div>
-            
-            <div class="violation-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Student ID</th>
-                    <th>Student Name</th>
-                    <th>Violation Type</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="violation in filteredViolations" :key="violation.id">
-                    <td>{{ violation.studentId }}</td>
-                    <td>{{ violation.studentName }}</td>
-                    <td>{{ violation.type }}</td>
-                    <td>{{ formatDate(violation.date) }}</td>
-                    <td><span class="status" :class="violation.status">{{ violation.status }}</span></td>
-                    <td class="actions">
-                      <button @click="viewViolationDetails(violation.id)">
-                        <i class='bx bx-show'></i>
-                      </button>
-                      <button @click="editViolation(violation)">
-                        <i class='bx bx-edit'></i>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Reports Content -->
-        <div v-if="activeTab === 'reports'">
-          <div class="reports-section">
-            <div class="reports-header">
-              <h2>System Reports</h2>
-              <div class="report-controls">
-                <select v-model="reportType" @change="generateReport">
-                  <option value="violations">Violation Reports</option>
-                  <option value="students">Student Reports</option>
-                  <option value="departments">Department Reports</option>
-                </select>
-                <select v-model="reportPeriod" @change="generateReport">
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                  <option value="custom">Custom Range</option>
-                </select>
-                <button class="btn-generate" @click="generateReport">
-                  <i class='bx bx-refresh'></i> Generate
-                </button>
-              </div>
-            </div>
-            
-            <div class="report-content">
-              <div class="report-chart">
-                <canvas ref="reportChart"></canvas>
-              </div>
-              <div class="report-summary">
-                <h3>Summary</h3>
-                <div class="summary-stats">
-                  <div class="stat-card" v-for="stat in reportStats" :key="stat.label">
-                    <h4>{{ stat.value }}</h4>
-                    <p>{{ stat.label }}</p>
+                <div class="text-content">
+                  <p class="title">{{ stat.title }}</p>
+                  <h3 class="value">{{ stat.value }}</h3>
+                  <div class="trend">
+                    <span class="material-icons" aria-hidden="true">{{ stat.trendIcon }}</span>
+                    <span>{{ stat.trend }}</span>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div class="report-actions">
-              <button class="btn-print" @click="printReport">
-                <i class='bx bx-printer'></i> Print Report
-              </button>
-              <button class="btn-export" @click="exportReport">
-                <i class='bx bx-download'></i> Export as PDF
-              </button>
+              <div class="gold-accent" aria-hidden="true"></div>
             </div>
           </div>
-        </div>
-      </main>
-      <!-- MAIN CONTENT -->
-    </section>
-    <!-- CONTENT -->
+        </section>
 
-    <!-- Modals -->
-    <AddDepartmentModal 
-      v-if="showAddDepartmentModal" 
-      @close="showAddDepartmentModal = false"
-      @save="saveDepartment"
-    />
-    
-    <AddViolationModal 
-      v-if="showAddViolationModal" 
-      @close="showAddViolationModal = false"
-      @save="saveViolation"
-    />
-    
-    <ViolationDetailsModal 
-      v-if="selectedViolation" 
-      :violation="selectedViolation"
-      @close="selectedViolation = null"
-      @update="updateViolationStatus"
-    />
+        <!-- Charts Section -->
+        <section class="charts-section" aria-labelledby="charts-heading">
+          <h2 id="charts-heading" class="visually-hidden">Data Charts</h2>
+          <div class="main-chart">
+            <div class="chart-header">
+              <h3>Revenue Performance</h3>
+              <div class="time-filters">
+                <button 
+                  v-for="filter in timeFilters" 
+                  :key="filter" 
+                  :class="{active: activeFilter === filter}"
+                  @click="activeFilter = filter"
+                  :aria-label="`View ${filter} data`"
+                >
+                  {{ filter }}
+                </button>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas :id="'mainChart-' + _uid" ref="mainChart" role="img" :aria-label="'Revenue performance chart showing ' + activeFilter + ' data'"></canvas>
+            </div>
+          </div>
+          
+          <div class="secondary-charts">
+            <div class="donut-chart">
+              <h3>Revenue Sources</h3>
+              <div class="chart-container">
+                <canvas :id="'donutChart-' + _uid" ref="donutChart" role="img" aria-label="Revenue sources breakdown chart"></canvas>
+              </div>
+            </div>
+            
+            <div class="bar-chart">
+              <h3>Top Products</h3>
+              <div class="chart-container">
+                <canvas :id="'barChart-' + _uid" ref="barChart" role="img" aria-label="Top products sales chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="recent-activity" aria-labelledby="activity-heading">
+          <div class="section-header">
+            <h3 id="activity-heading">Recent Activity</h3>
+            <button class="view-all">View All</button>
+          </div>
+          <div class="activity-list">
+            <div 
+              v-for="(activity, index) in activities" 
+              :key="index" 
+              class="activity-item"
+              :aria-labelledby="'activity-' + index"
+            >
+              <div class="activity-icon" :class="activity.type" aria-hidden="true">
+                <span class="material-icons">{{ activity.icon }}</span>
+              </div>
+              <div class="activity-details">
+                <p :id="'activity-' + index" class="activity-title">{{ activity.title }}</p>
+                <p class="activity-time">{{ activity.time }}</p>
+              </div>
+              <span class="activity-amount">{{ activity.amount }}</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
 </template>
 
+<script>
+import { Chart, registerables } from 'chart.js';
 
-<style scoped>
-/* Import the same styles from the original HTML */
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@400;500;600;700&display=swap');
+export default {
+  name: 'LuxuryDashboard',
+  data() {
+    return {
+      darkMode: false,
+      mobileNavOpen: false,
+      isMobile: false,
+      activeFilter: 'Monthly',
+      timeFilters: ['Daily', 'Weekly', 'Monthly', 'Yearly'],
+      stats: [
+        { 
+          icon: 'attach_money',
+          title: 'Total Revenue', 
+          value: '$48,569', 
+          trend: '+12.5%',
+          trendDirection: 'up',
+          trendIcon: 'trending_up'
+        },
+        { 
+          icon: 'groups',
+          title: 'New Clients', 
+          value: '154', 
+          trend: '+5.2%',
+          trendDirection: 'up',
+          trendIcon: 'trending_up'
+        },
+        { 
+          icon: 'inventory',
+          title: 'Products Sold', 
+          value: '1,248', 
+          trend: '+8.1%',
+          trendDirection: 'up',
+          trendIcon: 'trending_up'
+        },
+        { 
+          icon: 'savings',
+          title: 'Profit Margin', 
+          value: '32%', 
+          trend: '-2.5%',
+          trendDirection: 'down',
+          trendIcon: 'trending_down'
+        }
+      ],
+      activities: [
+        {
+          icon: 'payment',
+          title: 'Payment received from client #45892',
+          time: '10 minutes ago',
+          amount: '+$2,500',
+          type: 'payment'
+        },
+        {
+          icon: 'inventory',
+          title: 'New product added to inventory',
+          time: '2 hours ago',
+          amount: '12 items',
+          type: 'inventory'
+        },
+        {
+          icon: 'groups',
+          title: 'New client onboarded',
+          time: '1 day ago',
+          amount: 'Premium',
+          type: 'client'
+        },
+        {
+          icon: 'receipt',
+          title: 'Invoice #45892 generated',
+          time: '2 days ago',
+          amount: '$5,200',
+          type: 'invoice'
+        }
+      ]
+    }
+  },
+  mounted() {
+    this.checkMobile();
+    window.addEventListener('resize', this.checkMobile);
+    this.initCharts();
+    
+    // System preference detection
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      this.darkMode = true;
+      document.documentElement.classList.add('dark');
+    }
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.checkMobile);
+    if (this.mainChart) this.mainChart.destroy();
+    if (this.donutChart) this.donutChart.destroy();
+    if (this.barChart) this.barChart.destroy();
+  },
+  methods: {
+    toggleTheme() {
+      this.darkMode = !this.darkMode;
+      document.documentElement.classList.toggle('dark', this.darkMode);
+      this.updateCharts();
+    },
+    checkMobile() {
+      this.isMobile = window.innerWidth < 1024;
+      if (!this.isMobile) this.mobileNavOpen = false;
+    },
+    particleStyle(index) {
+      const size = 4 + Math.random() * 6;
+      const delay = Math.random() * 5;
+      const duration = 10 + Math.random() * 20;
+      const posX = Math.random() * 100;
+      const posY = Math.random() * 100;
+      
+      return {
+        width: `${size}px`,
+        height: `${size}px`,
+        left: `${posX}%`,
+        top: `${posY}%`,
+        animationDelay: `${delay}s`,
+        animationDuration: `${duration}s`,
+        opacity: 0.3 + Math.random() * 0.7
+      };
+    },
+    initCharts() {
+      Chart.register(...registerables);
+      
+      // Main Line Chart
+      const mainCtx = this.$refs.mainChart.getContext('2d');
+      this.mainChart = new Chart(mainCtx, {
+        type: 'line',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+          datasets: [{
+            label: 'Revenue',
+            data: [12500, 18900, 21800, 25400, 18500, 24500, 32400],
+            borderColor: '#D4AF37',
+            backgroundColor: 'rgba(212, 175, 55, 0.1)',
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#000',
+            pointBorderColor: '#D4AF37',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            pointBorderWidth: 2
+          }]
+        },
+        options: this.getChartOptions('line')
+      });
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+      // Donut Chart
+      const donutCtx = this.$refs.donutChart.getContext('2d');
+      this.donutChart = new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Product Sales', 'Services', 'Subscriptions', 'Other'],
+          datasets: [{
+            data: [45, 25, 20, 10],
+            backgroundColor: [
+              '#D4AF37',
+              '#000000',
+              '#333333',
+              '#555555'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: this.getChartOptions('doughnut')
+      });
+
+      // Bar Chart
+      const barCtx = this.$refs.barChart.getContext('2d');
+      this.barChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Luxury Watch', 'Gold Chain', 'Diamond Ring', 'Silk Scarf', 'Leather Bag'],
+          datasets: [{
+            label: 'Sales',
+            data: [85, 72, 64, 45, 38],
+            backgroundColor: '#D4AF37',
+            borderRadius: 4,
+            borderWidth: 0
+          }]
+        },
+        options: this.getChartOptions('bar')
+      });
+    },
+    updateCharts() {
+      if (this.mainChart) {
+        this.mainChart.options = this.getChartOptions('line');
+        this.mainChart.update();
+      }
+      if (this.donutChart) {
+        this.donutChart.options = this.getChartOptions('doughnut');
+        this.donutChart.update();
+      }
+      if (this.barChart) {
+        this.barChart.options = this.getChartOptions('bar');
+        this.barChart.update();
+      }
+    },
+    getChartOptions(type) {
+      const gridColor = this.darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+      const textColor = this.darkMode ? '#f5f5f5' : '#333333';
+      const fontFamily = "'Montserrat', sans-serif";
+
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: textColor,
+              font: {
+                family: fontFamily,
+                size: 12,
+                weight: '500'
+              },
+              padding: 20,
+              usePointStyle: true,
+              boxWidth: 8
+            }
+          },
+          tooltip: {
+            backgroundColor: this.darkMode ? '#1a1a1a' : '#ffffff',
+            titleColor: textColor,
+            bodyColor: textColor,
+            borderColor: '#D4AF37',
+            borderWidth: 1,
+            padding: 12,
+            usePointStyle: true,
+            boxPadding: 6,
+            cornerRadius: 8,
+            bodyFont: {
+              family: fontFamily,
+              size: 12,
+              weight: '500'
+            },
+            titleFont: {
+              family: fontFamily,
+              size: 14,
+              weight: '600'
+            }
+          }
+        }
+      };
+
+      if (type === 'line') {
+        return {
+          ...commonOptions,
+          scales: {
+            y: {
+              grid: {
+                color: gridColor,
+                drawBorder: false
+              },
+              ticks: {
+                color: textColor,
+                font: {
+                  family: fontFamily,
+                  weight: '500'
+                },
+                callback: function(value) {
+                  return '$' + value.toLocaleString();
+                }
+              }
+            },
+            x: {
+              grid: {
+                color: gridColor,
+                drawBorder: false
+              },
+              ticks: {
+                color: textColor,
+                font: {
+                  family: fontFamily,
+                  weight: '500'
+                }
+              }
+            }
+          },
+          elements: {
+            line: {
+              tension: 0.4
+            }
+          }
+        };
+      } else if (type === 'bar') {
+        return {
+          ...commonOptions,
+          scales: {
+            y: {
+              grid: {
+                color: gridColor,
+                drawBorder: false
+              },
+              ticks: {
+                color: textColor,
+                font: {
+                  family: fontFamily,
+                  weight: '500'
+                }
+              }
+            },
+            x: {
+              grid: {
+                color: gridColor,
+                drawBorder: false
+              },
+              ticks: {
+                color: textColor,
+                font: {
+                  family: fontFamily,
+                  weight: '500'
+                }
+              }
+            }
+          }
+        };
+      } else {
+        return commonOptions;
+      }
+    }
+  }
 }
+</script>
 
-a {
-  text-decoration: none;
-}
-
-li {
-  list-style: none;
-}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 :root {
-  --poppins: 'Poppins', sans-serif;
-  --lato: 'Lato', sans-serif;
-
-  --light: #F9F9F9;
-  --blue: #3C91E6;
-  --light-blue: #CFE8FF;
-  --grey: #eee;
-  --dark-grey: #AAAAAA;
-  --dark: #342E37;
-  --red: #DB504A;
-  --yellow: #FFCE26;
-  --light-yellow: #FFF2C6;
-  --orange: #FD7238;
-  --light-orange: #FFE0D3;
+  /* Luxury Light Theme */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f8f8;
+  --bg-card: #ffffff;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --gold-primary: #D4AF37;
+  --gold-secondary: #F5D07C;
+  --gold-accent: rgba(212, 175, 55, 0.2);
+  --border-color: #e0e0e0;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --sidenav-width: 280px;
+  --mobile-header-height: 60px;
+  --transition-duration: 0.3s;
 }
 
-html {
-  overflow-x: hidden;
+.dark {
+  /* Luxury Dark Theme */
+  --bg-primary: #121212;
+  --bg-secondary: #1a1a1a;
+  --bg-card: #1e1e1e;
+  --text-primary: #f5f5f5;
+  --text-secondary: #b0b0b0;
+  --border-color: #333333;
+  --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-body.dark {
-  --light: #0C0C1E;
-  --grey: #060714;
-  --dark: #FBFBFB;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--grey);
-  overflow-x: hidden;
+  font-family: 'Montserrat', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color var(--transition-duration) ease, 
+              color var(--transition-duration) ease;
 }
 
-/* SIDEBAR */
-#sidebar {
+/* Accessibility Class */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Main Layout Structure */
+.dashboard {
+  display: grid;
+  grid-template-columns: var(--sidenav-width) 1fr;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Gold Particle Background */
+.gold-particles {
   position: fixed;
   top: 0;
   left: 0;
-  width: 280px;
+  width: 100%;
   height: 100%;
-  background: var(--light);
-  z-index: 2000;
-  font-family: var(--lato);
-  transition: .3s ease;
-  overflow-x: hidden;
-  scrollbar-width: none;
+  pointer-events: none;
+  z-index: 0;
 }
-#sidebar::--webkit-scrollbar {
+
+.particle {
+  position: absolute;
+  background-color: var(--gold-primary);
+  border-radius: 50%;
+  animation: float-particle linear infinite;
+  z-index: 0;
+}
+
+@keyframes float-particle {
+  0% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-100px) translateX(20px);
+  }
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+}
+
+/* Mobile Header */
+.mobile-header {
   display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-header-height);
+  padding: 0 1rem;
+  background-color: var(--bg-card);
+  box-shadow: 0 2px 10px var(--shadow-color);
+  z-index: 100;
+  align-items: center;
+  justify-content: space-between;
 }
-#sidebar.hide {
-  width: 60px;
-}
-#sidebar .brand {
-  font-size: 24px;
+
+.mobile-logo {
+  font-size: 1.25rem;
   font-weight: 700;
-  height: 56px;
+  color: var(--gold-primary);
+}
+
+.menu-toggle, .theme-toggle-mobile {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  color: var(--blue);
-  position: sticky;
+  justify-content: center;
+  transition: background-color var(--transition-duration) ease;
+}
+
+.menu-toggle:hover, .theme-toggle-mobile:hover {
+  background: var(--gold-accent);
+}
+
+/* Side Navigation */
+.sidenav {
+  position: fixed;
   top: 0;
   left: 0;
-  background: var(--light);
-  z-index: 500;
-  padding-bottom: 20px;
-  box-sizing: content-box;
-}
-#sidebar .brand .bx {
-  min-width: 60px;
+  width: var(--sidenav-width);
+  height: 100vh;
+  background-color: var(--bg-card);
+  box-shadow: 2px 0 15px var(--shadow-color);
+  z-index: 100;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  transition: transform var(--transition-duration) ease;
 }
-#sidebar .side-menu {
-  width: 100%;
-  margin-top: 48px;
+
+.nav-header {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
 }
-#sidebar .side-menu li {
-  height: 48px;
+
+.logo {
+  display: flex;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.logo-svg {
+  width: 32px;
+  height: 32px;
+  margin-right: 0.75rem;
+}
+
+.close-nav {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-duration) ease;
+}
+
+.close-nav:hover {
+  color: var(--gold-primary);
+}
+
+.nav-menu {
+  flex: 1;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
   background: transparent;
-  margin-left: 6px;
-  border-radius: 48px 0 0 48px;
-  padding: 4px;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-duration) ease;
+  text-align: left;
 }
-#sidebar .side-menu li.active {
-  background: var(--grey);
-  position: relative;
+
+.nav-item span {
+  margin-right: 0.75rem;
+  color: var(--text-secondary);
+  transition: color var(--transition-duration) ease;
 }
-#sidebar .side-menu li.active::before {
-  content: '';
+
+.nav-item:hover {
+  background: var(--gold-accent);
+  color: var(--text-primary);
+}
+
+.nav-item:hover span {
+  color: var(--gold-primary);
+}
+
+.nav-item.active {
+  background: var(--gold-accent);
+  color: var(--gold-primary);
+  font-weight: 600;
+}
+
+.nav-item.active span {
+  color: var(--gold-primary);
+}
+
+.gold-bar {
   position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 24px;
+  background: var(--gold-primary);
+  border-radius: 2px 0 0 2px;
+}
+
+.user-profile {
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  top: -40px;
-  right: 0;
-  box-shadow: 20px 20px 0 var(--grey);
-  z-index: -1;
+  overflow: hidden;
+  margin-right: 0.75rem;
+  border: 2px solid var(--gold-primary);
 }
-#sidebar .side-menu li.active::after {
-  content: '';
-  position: absolute;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  bottom: -40px;
-  right: 0;
-  box-shadow: 20px -20px 0 var(--grey);
-  z-index: -1;
-}
-#sidebar .side-menu li a {
+
+.avatar img {
   width: 100%;
   height: 100%;
-  background: var(--light);
-  display: flex;
-  align-items: center;
-  border-radius: 48px;
-  font-size: 16px;
-  color: var(--dark);
-  white-space: nowrap;
-  overflow-x: hidden;
+  object-fit: cover;
 }
-#sidebar .side-menu.top li.active a {
-  color: var(--blue);
-}
-#sidebar.hide .side-menu li a {
-  width: calc(48px - (4px * 2));
-  transition: width .3s ease;
-}
-#sidebar .side-menu li a.logout {
-  color: var(--red);
-}
-#sidebar .side-menu.top li a:hover {
-  color: var(--blue);
-}
-#sidebar .side-menu li a .bx {
-  min-width: calc(60px  - ((4px + 6px) * 2));
-  display: flex;
-  justify-content: center;
-}
-/* SIDEBAR */
 
-/* CONTENT */
-#content {
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-info .name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.user-info .role {
+  font-size: 0.8rem;
+  color: var(--gold-primary);
+}
+
+/* Main Content */
+.main-content {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin-left: var(--sidenav-width);
   position: relative;
-  transition: .3s ease;
+  z-index: 1;
 }
 
-/* NAVBAR */
-#content nav {
-  height: 56px;
-  background: var(--light);
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  grid-gap: 24px;
-  font-family: var(--lato);
+.topnav {
   position: sticky;
   top: 0;
-  left: 0;
-  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--bg-card);
+  box-shadow: 0 2px 10px var(--shadow-color);
+  z-index: 10;
 }
-#content nav::before {
-  content: '';
-  position: absolute;
+
+.topnav h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  transition: border-color var(--transition-duration) ease;
+}
+
+.search-bar:focus-within {
+  border-color: var(--gold-primary);
+}
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 0 0.5rem;
+  font-family: 'Montserrat';
+  font-weight: 500;
+  outline: none;
+  width: 180px;
+}
+
+.notification-btn, .theme-toggle {
+  position: relative;
   width: 40px;
   height: 40px;
-  bottom: -40px;
-  left: 0;
   border-radius: 50%;
-  box-shadow: -20px -20px 0 var(--light);
-}
-#content nav a {
-  color: var(--dark);
-}
-#content nav .bx.bx-menu {
-  cursor: pointer;
-  color: var(--dark);
-}
-#content nav .nav-link {
-  font-size: 16px;
-  transition: .3s ease;
-}
-#content nav .nav-link:hover {
-  color: var(--blue);
-}
-#content nav form {
-  max-width: 400px;
-  width: 100%;
-  margin-right: auto;
-}
-#content nav form .form-input {
   display: flex;
   align-items: center;
-  height: 36px;
-}
-#content nav form .form-input input {
-  flex-grow: 1;
-  padding: 0 16px;
-  height: 100%;
-  border: none;
-  background: var(--grey);
-  border-radius: 36px 0 0 36px;
-  outline: none;
-  width: 100%;
-  color: var(--dark);
-}
-#content nav form .form-input button {
-  width: 36px;
-  height: 100%;
-  display: flex;
   justify-content: center;
-  align-items: center;
-  background: var(--blue);
-  color: var(--light);
-  font-size: 18px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   border: none;
-  outline: none;
-  border-radius: 0 36px 36px 0;
   cursor: pointer;
+  transition: all var(--transition-duration) ease;
 }
-#content nav .notification {
-  font-size: 20px;
-  position: relative;
+
+.notification-btn:hover, .theme-toggle:hover {
+  background: var(--gold-accent);
+  color: var(--gold-primary);
 }
-#content nav .notification .num {
+
+.badge {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: -5px;
+  right: -5px;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid var(--light);
-  background: var(--red);
-  color: var(--light);
-  font-weight: 700;
-  font-size: 12px;
+  background: #ff4757;
+  color: white;
+  font-size: 0.7rem;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  font-weight: 700;
 }
-#content nav .profile img {
-  width: 36px;
-  height: 36px;
-  object-fit: cover;
-  border-radius: 50%;
-}
-#content nav .switch-mode {
-  display: block;
-  min-width: 50px;
-  height: 25px;
-  border-radius: 25px;
-  background: var(--grey);
-  cursor: pointer;
-  position: relative;
-}
-#content nav .switch-mode::before {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  bottom: 2px;
-  width: calc(25px - 4px);
-  background: var(--blue);
-  border-radius: 50%;
-  transition: all .3s ease;
-}
-#content nav #switch-mode:checked + .switch-mode::before {
-  left: calc(100% - (25px - 4px) - 2px);
-}
-/* NAVBAR */
 
-/* MAIN */
-#content main {
-  width: 100%;
-  padding: 36px 24px;
-  font-family: var(--poppins);
-  max-height: calc(100vh - 56px);
+/* Dashboard Content */
+.dashboard-content {
+  flex: 1;
+  padding: 2rem;
   overflow-y: auto;
-}
-#content main .head-title {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  grid-gap: 16px;
-  flex-wrap: wrap;
-}
-#content main .head-title .left h1 {
-  font-size: 36px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: var(--dark);
-}
-#content main .head-title .left .breadcrumb {
-  display: flex;
-  align-items: center;
-  grid-gap: 16px;
-}
-#content main .head-title .left .breadcrumb li {
-  color: var(--dark);
-}
-#content main .head-title .left .breadcrumb li a {
-  color: var(--dark-grey);
-  pointer-events: none;
-}
-#content main .head-title .left .breadcrumb li a.active {
-  color: var(--blue);
-  pointer-events: unset;
-}
-#content main .head-title .btn-download {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 36px;
-  background: var(--blue);
-  color: var(--light);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  grid-gap: 10px;
-  font-weight: 500;
+  flex-direction: column;
+  gap: 2rem;
 }
 
-#content main .box-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  grid-gap: 24px;
-  margin-top: 36px;
-}
-#content main .box-info li {
-  padding: 24px;
-  background: var(--light);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  grid-gap: 24px;
-}
-#content main .box-info li .bx {
-  width: 80px;
-  height: 80px;
-  border-radius: 10px;
-  font-size: 36px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-#content main .box-info li:nth-child(1) .bx {
-  background: var(--light-blue);
-  color: var(--blue);
-}
-#content main .box-info li:nth-child(2) .bx {
-  background: var(--light-yellow);
-  color: var(--yellow);
-}
-#content main .box-info li:nth-child(3) .bx {
-  background: var(--light-orange);
-  color: var(--orange);
-}
-#content main .box-info li .text h3 {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--dark);
-}
-#content main .box-info li .text p {
-  color: var(--dark);  
-}
-
-#content main .table-data {
-  display: flex;
-  flex-wrap: wrap;
-  grid-gap: 24px;
-  margin-top: 24px;
-  width: 100%;
-  color: var(--dark);
-}
-#content main .table-data > div {
-  border-radius: 20px;
-  background: var(--light);
-  padding: 24px;
-  overflow-x: auto;
-}
-#content main .table-data .head {
-  display: flex;
-  align-items: center;
-  grid-gap: 16px;
-  margin-bottom: 24px;
-}
-#content main .table-data .head h3 {
-  margin-right: auto;
-  font-size: 24px;
-  font-weight: 600;
-}
-#content main .table-data .head .bx {
-  cursor: pointer;
-}
-
-#content main .table-data .order {
-  flex-grow: 1;
-  flex-basis: 500px;
-}
-#content main .table-data .order table {
-  width: 100%;
-  border-collapse: collapse;
-}
-#content main .table-data .order table th {
-  padding-bottom: 12px;
-  font-size: 13px;
-  text-align: left;
-  border-bottom: 1px solid var(--grey);
-}
-#content main .table-data .order table td {
-  padding: 16px 0;
-}
-#content main .table-data .order table tr td:first-child {
-  display: flex;
-  align-items: center;
-  grid-gap: 12px;
-  padding-left: 6px;
-}
-#content main .table-data .order table td img {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-#content main .table-data .order table tbody tr:hover {
-  background: var(--grey);
-}
-#content main .table-data .order table tr td .status {
-  font-size: 10px;
-  padding: 6px 16px;
-  color: var(--light);
-  border-radius: 20px;
-  font-weight: 700;
-}
-#content main .table-data .order table tr td .status.completed,
-#content main .table-data .order table tr td .status.resolved {
-  background: var(--blue);
-}
-#content main .table-data .order table tr td .status.process {
-  background: var(--yellow);
-}
-#content main .table-data .order table tr td .status.pending {
-  background: var(--orange);
-}
-
-#content main .table-data .todo {
-  flex-grow: 1;
-  flex-basis: 300px;
-}
-#content main .table-data .todo .todo-list {
-  width: 100%;
-}
-#content main .table-data .todo .todo-list li {
-  width: 100%;
-  margin-bottom: 16px;
-  background: var(--grey);
-  border-radius: 10px;
-  padding: 14px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-#content main .table-data .todo .todo-list li .bx {
-  cursor: pointer;
-}
-#content main .table-data .todo .todo-list li.completed {
-  border-left: 10px solid var(--blue);
-}
-#content main .table-data .todo .todo-list li.not-completed {
-  border-left: 10px solid var(--orange);
-}
-#content main .table-data .todo .todo-list li:last-child {
+/* Stats Grid */
+.stats-section {
   margin-bottom: 0;
 }
 
-/* Department Management Styles */
-.department-management {
-  background: var(--light);
-  border-radius: 20px;
-  padding: 24px;
-  margin-top: 24px;
-}
-
-.department-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.department-header h2 {
-  font-size: 24px;
-  color: var(--dark);
-}
-
-.btn-add {
-  background: var(--blue);
-  color: var(--light);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.department-list {
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.department-card {
-  background: var(--grey);
-  padding: 16px;
-  border-radius: 10px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.dept-info h3 {
-  color: var(--dark);
-  margin-bottom: 8px;
-}
-
-.dept-info p {
-  color: var(--dark-grey);
-  font-size: 14px;
-}
-
-.dept-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-edit, .btn-delete {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.btn-edit {
-  background: var(--light-blue);
-  color: var(--blue);
-}
-
-.btn-delete {
-  background: var(--light-orange);
-  color: var(--orange);
-}
-
-/* Violation Management Styles */
-.violation-management {
-  background: var(--light);
-  border-radius: 20px;
-  padding: 24px;
-  margin-top: 24px;
-}
-
-.violation-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.violation-header h2 {
-  font-size: 24px;
-  color: var(--dark);
-}
-
-.violation-controls {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.violation-controls select {
-  padding: 8px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--grey);
-  background: var(--light);
-  color: var(--dark);
-}
-
-.violation-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.violation-table th {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--grey);
-  color: var(--dark-grey);
-}
-
-.violation-table td {
-  padding: 12px;
-  border-bottom: 1px solid var(--grey);
-}
-
-.violation-table .actions {
-  display: flex;
-  gap: 8px;
-}
-
-.violation-table .actions button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--grey);
-  color: var(--dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-/* Reports Section Styles */
-.reports-section {
-  background: var(--light);
-  border-radius: 20px;
-  padding: 24px;
-  margin-top: 24px;
-}
-
-.reports-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.reports-header h2 {
-  font-size: 24px;
-  color: var(--dark);
-}
-
-.report-controls {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.report-controls select {
-  padding: 8px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--grey);
-  background: var(--light);
-  color: var(--dark);
-}
-
-.btn-generate, .btn-print, .btn-export {
-  background: var(--blue);
-  color: var(--light);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.report-content {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.report-chart {
-  flex: 2;
-  background: var(--grey);
-  border-radius: 10px;
-  padding: 16px;
-  height: 400px;
-}
-
-.report-summary {
-  flex: 1;
-  background: var(--grey);
-  border-radius: 10px;
-  padding: 16px;
-}
-
-.report-summary h3 {
-  color: var(--dark);
-  margin-bottom: 16px;
-}
-
-.summary-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
 }
 
 .stat-card {
-  background: var(--light);
-  padding: 16px;
-  border-radius: 10px;
-  text-align: center;
+  position: relative;
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  overflow: hidden;
+  transition: all var(--transition-duration) ease;
 }
 
-.stat-card h4 {
-  font-size: 24px;
-  color: var(--blue);
-  margin-bottom: 8px;
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px var(--shadow-color);
 }
 
-.stat-card p {
-  color: var(--dark-grey);
-  font-size: 14px;
+.stat-card.up .gold-accent {
+  background: linear-gradient(90deg, var(--gold-primary), var(--gold-secondary));
 }
 
-.report-actions {
+.stat-card.down .gold-accent {
+  background: linear-gradient(90deg, #ff4757, #ff6b81);
+}
+
+.gold-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+}
+
+.card-content {
   display: flex;
-  justify-content: flex-end;
-  gap: 16px;
+  align-items: center;
 }
 
-/* Responsive Styles */
-@media screen and (max-width: 768px) {
-  #sidebar {
-    width: 200px;
+.icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1.5rem;
+  background: var(--gold-accent);
+  color: var(--gold-primary);
+  transition: transform var(--transition-duration) ease;
+}
+
+.stat-card:hover .icon {
+  transform: scale(1.05);
+}
+
+.stat-card.down .icon {
+  background: rgba(255, 71, 87, 0.1);
+  color: #ff4757;
+}
+
+.text-content {
+  flex: 1;
+}
+
+.title {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: var(--text-primary);
+}
+
+.trend {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.stat-card.up .trend {
+  color: var(--gold-primary);
+}
+
+.stat-card.down .trend {
+  color: #ff4757;
+}
+
+.trend .material-icons {
+  font-size: 1.2rem;
+  margin-right: 0.25rem;
+}
+
+/* Charts Section */
+.charts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.main-chart, .donut-chart, .bar-chart {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  transition: transform var(--transition-duration) ease;
+}
+
+.main-chart:hover, .donut-chart:hover, .bar-chart:hover {
+  transform: translateY(-3px);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.chart-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.time-filters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.time-filters button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-family: 'Montserrat';
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-duration) ease;
+}
+
+.time-filters button:hover {
+  border-color: var(--gold-primary);
+  color: var(--gold-primary);
+}
+
+.time-filters button.active {
+  background: var(--gold-accent);
+  border-color: var(--gold-primary);
+  color: var(--gold-primary);
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+.secondary-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Recent Activity */
+.recent-activity {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  transition: transform var(--transition-duration) ease;
+}
+
+.recent-activity:hover {
+  transform: translateY(-3px);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.view-all {
+  background: transparent;
+  border: none;
+  color: var(--gold-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  font-family: 'Montserrat';
+  transition: opacity var(--transition-duration) ease;
+}
+
+.view-all:hover {
+  opacity: 0.8;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  transition: all var(--transition-duration) ease;
+}
+
+.activity-item:hover {
+  transform: translateX(5px);
+}
+
+.activity-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.activity-icon.payment {
+  background: var(--gold-primary);
+}
+
+.activity-icon.inventory {
+  background: #333333;
+}
+
+.activity-icon.client {
+  background: #555555;
+}
+
+.activity-icon.invoice {
+  background: #777777;
+}
+
+.activity-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-title {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.activity-amount {
+  font-weight: 600;
+  color: var(--gold-primary);
+  margin-left: 1rem;
+  flex-shrink: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .dashboard {
+    grid-template-columns: 1fr;
   }
 
-  #content {
-    width: calc(100% - 60px);
-    left: 200px;
+  .sidenav {
+    transform: translateX(-100%);
+    top: var(--mobile-header-height);
+    height: calc(100vh - var(--mobile-header-height));
   }
 
-  #content nav .nav-link {
+  .sidenav.visible {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    grid-column: 1;
+    margin-left: 0;
+    width: 100%;
+    padding-top: var(--mobile-header-height);
+  }
+
+  .mobile-header {
+    display: flex;
+  }
+
+  .topnav {
     display: none;
   }
-  
-  .report-content {
-    flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    padding: 1.5rem;
   }
-  
-  .department-list {
+
+  .header-actions {
+    gap: 0.5rem;
+  }
+
+  .search-bar input {
+    width: 120px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .secondary-charts {
     grid-template-columns: 1fr;
   }
 }
 
-@media screen and (max-width: 576px) {
-  #content nav form .form-input input {
-    display: none;
-  }
-
-  #content nav form .form-input button {
-    width: auto;
-    height: auto;
-    background: transparent;
-    border-radius: none;
-    color: var(--dark);
-  }
-
-  #content nav form.show .form-input input {
-    display: block;
-    width: 100%;
-  }
-  #content nav form.show .form-input button {
-    width: 36px;
-    height: 100%;
-    border-radius: 0 36px 36px 0;
-    color: var(--light);
-    background: var(--red);
-  }
-
-  #content nav form.show ~ .notification,
-  #content nav form.show ~ .profile {
-    display: none;
-  }
-
-  #content main .box-info {
+@media (max-width: 480px) {
+  .stats-grid {
     grid-template-columns: 1fr;
   }
 
-  #content main .table-data .head {
-    min-width: 420px;
+  .time-filters {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
-  #content main .table-data .order table {
-    min-width: 420px;
+
+  .time-filters button {
+    padding: 0.5rem;
+    font-size: 0.75rem;
   }
-  #content main .table-data .todo .todo-list {
-    min-width: 420px;
-  }
-  
-  .violation-header, .reports-header {
+
+  .activity-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
+    gap: 0.5rem;
   }
-  
-  .violation-controls, .report-controls {
-    width: 100%;
-    flex-direction: column;
-    align-items: flex-start;
+
+  .activity-icon {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
   }
-  
-  .report-actions {
-    justify-content: center;
+
+  .activity-amount {
+    align-self: flex-end;
+    margin-left: 0;
   }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gold-primary);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-secondary);
+}
+
+/* Mobile Nav Overlay */
+.dashboard.mobile-nav-open::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+  pointer-events: all;
+  transition: opacity var(--transition-duration) ease;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible, 
+input:focus-visible, 
+[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 2px;
 }
 </style>
